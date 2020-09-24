@@ -8,190 +8,189 @@ np.random.seed(42)
 
 
 class Scaler():
-    # hint: https://machinelearningmastery.com/standardscaler-and-minmaxscaler-transforms-in-python/
     def __init__(self):
-        raise NotImplementedError
+    	print("Class scalar object created!")
+    	return
+    	raise NotImplementedError
     def __call__(self,features, is_train=False):
+    	
+        print("Normalizing features!")
+        minm= features.min()
+        maxm= features.max()
+        avrg= features.mean()
+        sd= features.std()
+
+        # --Normalization ---
+        '''for i in range(0,features.shape[0]):
+            if (maxm-minm)!=0:
+                features[i] = (features[i]-minm)/(maxm-minm)'''
+            
+        #---Standardisation  ---
+        for i in range(0,features.shape[0]):
+            if sd!=0:
+                features[i] = (features[i]-avrg)/sd
+        
+        return features
+        
         raise NotImplementedError
 
 
 def get_features(csv_path,is_train=False,scaler=None):
-    '''
-    Description:
-    read input feature columns from csv file
-    manipulate feature columns, create basis functions, do feature scaling etc.
-    return a feature matrix (numpy array) of shape m x n 
-    m is number of examples, n is number of features
-    return value: numpy array
-    '''
+    
+    f = pd.read_csv(csv_path)
+    if is_train==False :
+        feature_matrix = np.array(f)
+    else:   
+        feature_matrix = np.array(f[f.columns[:-1]])
 
-    '''
-    Arguments:
-    csv_path: path to csv file
-    is_train: True if using training data (optional)
-    scaler: a class object for doing feature scaling (optional)
-    '''
+    if scaler!=None:
+        feature_matrix = scaler(feature_matrix) 
+    else:
+        feature_matrix=feature_matrix/10000
+    #print(feature_matrix)
+    bias = np.array([1]*(f.shape[0])) #bias added
+    feature_matrix = np.hstack((np.atleast_2d(bias).T,feature_matrix))
+    print("feature_matrix create and returned!")
 
-    '''
-    help:
-    useful links: 
-        * https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html
-        * https://www.geeksforgeeks.org/python-read-csv-using-pandas-read_csv/
-    '''
-
+    return feature_matrix
     raise NotImplementedError
 
 def get_targets(csv_path):
-    '''
-    Description:
-    read target outputs from the csv file
-    return a numpy array of shape m x 1
-    m is number of examples
-    '''
+    
+    f = pd.read_csv(csv_path)
+    targets = np.array(f[f.columns[-1]])
+    print("Target returned!")
+
+    return targets
     raise NotImplementedError
      
 
 def analytical_solution(feature_matrix, targets, C=0.0):
-    '''
-    Description:
-    implement analytical solution to obtain weights
-    as described in lecture 4b
-    return value: numpy array
-    '''
 
-    '''
-    Arguments:
-    feature_matrix: numpy array of shape m x n
-    weights: numpy array of shape m x 1
-    '''
+    # w * = (X^T * X+ C*I)^-1 * X^T* y
+    X = feature_matrix
+    X_transpose = np.transpose(X)
+    mat = np.matmul(X_transpose,X)
+    mat = mat+ C*np.identity(feature_matrix.shape[1])
 
-    raise NotImplementedError 
+    w_soln = np.matmul(np.matmul(np.linalg.inv(mat),X_transpose),targets)
+    print(w_soln)
+    print("calculated weights!")
+    return w_soln
+    raise NotImplementedError
 
 def get_predictions(feature_matrix, weights):
-    '''
-    description
-    return predictions given feature matrix and weights
-    return value: numpy array
-    '''
-
-    '''
-    Arguments:
-    feature_matrix: numpy array of shape m x n
-    weights: numpy array of shape n x 1
-    '''
+    
+    y_pred = np.matmul(feature_matrix,weights)
+    #print("fetching predctions..")
+    y_pred = np.rint(y_pred)
+    return y_pred
 
     raise NotImplementedError
 
 def mse_loss(feature_matrix, weights, targets):
-    '''
-    Description:
-    Implement mean squared error loss function
-    return value: float (scalar)
-    '''
+    
+    n= len(targets)
+    y_pred = get_predictions(feature_matrix,weights)
+    loss = (y_pred - targets) ** 2
+    mse_loss = np.sum(loss)/(n)
+    print("returning the MSE_loss!")
 
-    '''
-    Arguments:
-    feature_matrix: numpy array of shape m x n
-    weights: numpy array of shape n x 1
-    targets: numpy array of shape m x 1
-    '''
+    return mse_loss
+
     raise NotImplementedError
 
 def l2_regularizer(weights):
-    '''
-    Description:
-    Implement l2 regularizer
-    return value: float (scalar)
-    '''
 
-    '''
-    Arguments
-    weights: numpy array of shape n x 1
-    '''
+    l2_reg = np.sum(weights**2)
+    print(" sending l2_regularization value")
+    return l2_reg
+
     raise NotImplementedError
 
 def loss_fn(feature_matrix, weights, targets, C=0.0):
-    '''
-    Description:
-    compute the loss function: mse_loss + C * l2_regularizer
-    '''
 
-    '''
-    Arguments:
-    feature_matrix: numpy array of shape m x n
-    weights: numpy array of shape n x 1
-    targets: numpy array of shape m x 1
-    C: weight for regularization penalty
-    return value: float (scalar)
-    '''
+
+    loss = mse_loss(feature_matrix,weights,targets)+C*l2_regularizer(weights)
+    print("Calculating and returning loss value")
+    return loss
 
     raise NotImplementedError
 
 def compute_gradients(feature_matrix, weights, targets, C=0.0):
-    '''
-    Description:
-    compute gradient of weights w.r.t. the loss_fn function implemented above
-    '''
+    
 
-    '''
-    Arguments:
-    feature_matrix: numpy array of shape m x n
-    weights: numpy array of shape n x 1
-    targets: numpy array of shape m x 1
-    C: weight for regularization penalty
-    return value: numpy array
-    '''
+    y_pred = get_predictions(feature_matrix,weights)
+    m = len(targets)
+    n = len(weights)
+    gradient = [0] * n
+    #print(n)
+    for i in range(0,n):
+        grad = 0
+        #if i!=0 :
+        for j in range(0,m):
+            grad += ((int(y_pred[j])-targets[j])*feature_matrix[j,i]*2)
+
+        gradient[i] = (grad/m)+(C*(2*float(weights[i])))
+        #print(gradient[i])
+        #else:
+        #   gradient[i] = (np.sum(((y_pred-targets)*2))/m
+
+    gradient =np.array(gradient)
+
+    return gradient 
+
     raise NotImplementedError
 
 def sample_random_batch(feature_matrix, targets, batch_size):
-    '''
-    Description
-    Batching -- Randomly sample batch_size number of elements from feature_matrix and targets
-    return a tuple: (sampled_feature_matrix, sampled_targets)
-    sampled_feature_matrix: numpy array of shape batch_size x n
-    sampled_targets: numpy array of shape batch_size x 1
-    '''
 
-    '''
-    Arguments:
-    feature_matrix: numpy array of shape m x n
-    targets: numpy array of shape m x 1
-    batch_size: int
-    '''    
+    sample = np.column_stack((feature_matrix,targets))
+    #print(sample)
+    np.random.shuffle(sample)
+    mini_batches =[]
+    #print(sample))
+    for i in range(0,round(len(sample)/batch_size)) :
+        #print(i,)
+        mini = []
+        if (i+1)*batch_size>len(sample):
+            mini.append(sample[i * batch_size:,:-1])
+            mini.append(sample[i * batch_size:,-1])
+        else:
+            mini.append(sample[i * batch_size:(i + 1)*batch_size,:-1])
+            mini.append(sample[i * batch_size:(i + 1)*batch_size,-1])
+        
+        mini_batches.append(mini)
+
+    return mini_batches
     raise NotImplementedError
     
 def initialize_weights(n):
-    '''
-    Description:
-    initialize weights to some initial values
-    return value: numpy array of shape n x 1
-    '''
+    
+    weights = np.random.randn(n)
+    #weights = np.random.uniform(-10,10,n)
+    #weights = np.random.normal(0,0.1,n)
+    np.random.shuffle(weights)
+    print("return randomly initiated bias and weights...")
+    return weights
 
-    '''
-    Arguments
-    n: int
-    '''
     raise NotImplementedError
 
 def update_weights(weights, gradients, lr):
-    '''
-    Description:
-    update weights using gradient descent
-    retuen value: numpy matrix of shape nx1
-    '''
-
-    '''
-    Arguments:
-    # weights: numpy matrix of shape nx1
-    # gradients: numpy matrix of shape nx1
-    # lr: learning rate
-    '''    
+    
+    weights = weights-(lr*gradients)     
+    return weights
 
     raise NotImplementedError
 
-def early_stopping(arg_1=None, arg_2=None, arg_3=None, arg_n=None):
+def early_stopping(flag):
     # allowed to modify argument list as per your need
     # return True or False
+
+    if flag ==2 :
+        return 1
+    else :
+        return 0
+
     raise NotImplementedError
     
 
@@ -204,39 +203,49 @@ def do_gradient_descent(train_feature_matrix,
                         batch_size=32,
                         max_steps=10000,
                         eval_steps=5):
-    '''
-    feel free to significantly modify the body of this function as per your needs.
-    ** However **, you ought to make use of compute_gradients and update_weights function defined above
-    return your best possible estimate of LR weights
-
-    a sample code is as follows -- 
-    '''
-    weights = initialize_weights(n)
+    
+    #a sample code is as follows -- 
+    n_wt = train_feature_matrix.shape[1]
+    weights = initialize_weights(n_wt)
+    #print(weights)
     dev_loss = mse_loss(dev_feature_matrix, weights, dev_targets)
     train_loss = mse_loss(train_feature_matrix, weights, train_targets)
+    
+    early_flag =0
+    epoch = 0
+    index = list(range(0,len(train_targets)))
 
     print("step {} \t dev loss: {} \t train loss: {}".format(0,dev_loss,train_loss))
-    for step in range(1,max_steps+1):
+
+    for step in range(0,max_steps):
+
+        #batch_no =0
 
         #sample a batch of features and gradients
-        features,targets = sample_random_batch(train_feature_matrix,train_targets,batch_size)
-        
-        #compute gradients
-        gradients = compute_gradients(features, weights, targets, C)
-        
-        #update weights
-        weights = update_weights(weights, gradients, lr)
+        mini_batches = sample_random_batch(train_feature_matrix,train_targets,batch_size)
 
-        if step%eval_steps == 0:
-            dev_loss = mse_loss(dev_feature_matrix, weights, dev_targets)
-            train_loss = mse_loss(train_feature_matrix, weights, train_targets)
-            print("step {} \t dev loss: {} \t train loss: {}".format(step,dev_loss,train_loss))
+        for mini_batch in mini_batches: 
 
-        '''
-        implement early stopping etc. to improve performance.
-        '''
+            #batch_no +=1 
+
+            #print("evaluating batch no {} \t".format(batch_no))
+
+            #print(mini_batch[0].shape)
+            #compute gradients
+            gradients = compute_gradients(mini_batch[0], weights, mini_batch[1], C)
+
+            #update weights
+            weights = update_weights(weights, gradients, lr)
+            #print(weights)
+
+        epoch = epoch +1
+        dev_loss = mse_loss(dev_feature_matrix, weights, dev_targets)
+        train_loss = mse_loss(train_feature_matrix, weights, train_targets)
+        print("epoch {} \t  dev loss: {} \t train loss: {}".format(epoch,dev_loss,train_loss))
 
     return weights
+
+
 
 def do_evaluation(feature_matrix, targets, weights):
     # your predictions will be evaluated based on mean squared error 
@@ -244,32 +253,50 @@ def do_evaluation(feature_matrix, targets, weights):
     loss =  mse_loss(feature_matrix, weights, targets)
     return loss
 
+
+
 if __name__ == '__main__':
     scaler = Scaler() #use of scaler is optional
-    train_features, train_targets = get_features('data/train.csv',True,scaler), get_targets('data/train.csv')
-    dev_features, dev_targets = get_features('data/dev.csv',False,scaler), get_targets('data/dev.csv')
+    train_features, train_targets = get_features('data/train.csv',True), get_targets('data/train.csv')
+    dev_features, dev_targets = get_features('data/dev.csv',True), get_targets('data/dev.csv')
 
-    a_solution = analytical_solution(train_features, train_targets, C=1e-8)
+    a_solution = analytical_solution(train_features, train_targets, C=0.00008)
     print('evaluating analytical_solution...')
     dev_loss=do_evaluation(dev_features, dev_targets, a_solution)
     train_loss=do_evaluation(train_features, train_targets, a_solution)
     print('analytical_solution \t train loss: {}, dev_loss: {} '.format(train_loss, dev_loss))
 
+    '''test_features = get_features('data/test.csv',False)
+    predictions = get_predictions(test_features, a_solution)
+    result_file = open('test_results_closed_form.csv', 'w')
+    result_file.write("{},{}{}".format("instance_id","shares", '\n'))
+    for i in range(len(predictions)):
+        result_file.write("{},{}{}".format(i,predictions[i], '\n'))'''
+
+    train_features, train_targets = get_features('data/train.csv',True,scaler), get_targets('data/train.csv')
+    dev_features, dev_targets = get_features('data/dev.csv',True,scaler), get_targets('data/dev.csv')
+
     print('training LR using gradient descent...')
-    gradient_descent_soln = do_gradient_descent(train_features, 
+    gradient_descent_soln = do_gradient_descent(train_features,
                         train_targets, 
                         dev_features,
                         dev_targets,
-                        lr=1.0,
-                        C=0.0,
-                        batch_size=32,
-                        max_steps=2000000,
-                        eval_steps=5)
+                        lr=0.00999,
+                        C=0.000000000000000955,
+                        batch_size = 32,
+                        max_steps=200)
 
     print('evaluating iterative_solution...')
     dev_loss=do_evaluation(dev_features, dev_targets, gradient_descent_soln)
     train_loss=do_evaluation(train_features, train_targets, gradient_descent_soln)
     print('gradient_descent_soln \t train loss: {}, dev_loss: {} '.format(train_loss, dev_loss))
+
+    '''test_features = get_features('data/test.csv',False,scaler)
+    predictions = get_predictions(test_features, a_solution)
+    result_file = open('test_results_gradient descent.csv', 'w')
+    result_file.write("{},{}{}".format("instance_id","shares", '\n'))
+    for i in range(len(predictions)):
+        result_file.write("{},{}{}".format(i,predictions[i], '\n'))'''
     
 
 
